@@ -235,27 +235,28 @@ Kết quả:
 
 ## 6. Mô hình
 
-### 6.1. Task 1 – Simple RNN dự báo t+2
+### 6.1. Task 1 – Custom Simple RNN dự báo t+2
 
 File: `src/model_builder_2step.py`
 
-Mô hình Simple RNN được code **cụ thể từng layer**, ví dụ:
+Mô hình dùng **MySimpleRNN** (custom layer) thay vì `keras.layers.SimpleRNN`:
 
 ```python
-from tensorflow.keras.layers import Input, SimpleRNN, Dense
+from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.models import Model
 from tensorflow import keras
 
 from .metrics import rmse, r2
+from .custom_rnn import MySimpleRNN  # ví dụ file chứa MySimpleRNN
 
 def build_2step_model(lookback, num_features, learning_rate=0.001):
     inputs = Input(shape=(lookback, num_features), name="rnn_input")
 
-    x = SimpleRNN(
+    x = MySimpleRNN(
         units=64,
         activation="tanh",
         return_sequences=False,
-        name="simplernn_64_tanh",
+        name="mysimplernn_64_tanh",
     )(inputs)
 
     x = Dense(
@@ -280,26 +281,89 @@ def build_2step_model(lookback, num_features, learning_rate=0.001):
     return model
 ```
 
-### 6.2. Task 2 – LSTM Seq2Seq dự báo 5 bước
+### 6.2. Task 2 – Custom LSTM Seq2Seq dự báo 5 bước
 
 File: `src/model_builder_seq2seq.py`
 
-Mô hình Encoder–Decoder với LSTM:
-
-- Encoder LSTM đọc `(lookback, num_features)` → trả về `(state_h, state_c)`.
-- Decoder:
-  - `RepeatVector(horizon)` để lặp trạng thái ẩn theo chiều thời gian.
-  - LSTM với `return_sequences=True`, khởi tạo `initial_state=[state_h, state_c]`.
-  - `TimeDistributed(Dense(1))` để sinh ra chuỗi dự báo PM2.5.
-
-Compile với:
+Sử dụng **MyLSTMCell** + `keras.layers.RNN` để xây dựng encoder–decoder:
 
 ```python
-model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
-    loss="mse",
-    metrics=[rmse, r2],
+from tensorflow.keras.layers import (
+    Input,
+    RNN,
+    RepeatVector,
+    TimeDistributed,
+    Dense,
 )
+from tensorflow.keras.models import Model
+from tensorflow import keras
+
+from .metrics import rmse, r2
+from .custom_lstm import MyLSTMCell  # ví dụ file chứa MyLSTMCell
+
+def build_seq2seq_model(lookback, num_features, horizon=5, learning_rate=0.001):
+    encoder_inputs = Input(
+        shape=(lookback, num_features),
+        name="encoder_input",
+    )
+
+    encoder_lstm = RNN(
+        MyLSTMCell(
+            units=64,
+            activation="tanh",
+            recurrent_activation="sigmoid",
+            name="encoder_lstm_cell_64",
+        ),
+        return_sequences=False,
+        return_state=True,
+        name="encoder_lstm_64",
+    )
+
+    encoder_output, state_h, state_c = encoder_lstm(encoder_inputs)
+
+    decoder_inputs = RepeatVector(horizon, name="repeat_horizon")(state_h)
+
+    decoder_lstm = RNN(
+        MyLSTMCell(
+            units=64,
+            activation="tanh",
+            recurrent_activation="sigmoid",
+            name="decoder_lstm_cell_64",
+        ),
+        return_sequences=True,
+        return_state=False,
+        name="decoder_lstm_64",
+    )
+
+    decoder_outputs = decoder_lstm(
+        decoder_inputs,
+        initial_state=[state_h, state_c],
+    )
+
+    decoder_dense = TimeDistributed(
+        Dense(
+            units=1,
+            activation=None,
+            name="pm25_output_step",
+        ),
+        name="timedistributed_pm25",
+    )
+
+    outputs = decoder_dense(decoder_outputs)
+
+    model = Model(
+        inputs=encoder_inputs,
+        outputs=outputs,
+        name="seq2seq_lstm_pm25_5step_custom",
+    )
+
+    model.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
+        loss="mse",
+        metrics=[rmse, r2],
+    )
+
+    return model
 ```
 
 ---
