@@ -41,12 +41,12 @@ def main():
         valid_ratio=0.9,
         clip_outliers=True,      # xử lý ngoại lai
         outlier_factor=1.5,
-        #augment_train=True,      # làm giàu dữ liệu train bằng nhiễu nhỏ
-        #aug_n=2,                 # mỗi mẫu train nhân thêm 2 bản noisy
+        augment_train=True,      # làm giàu dữ liệu train bằng nhiễu nhỏ
+        aug_n=2,                 # mỗi mẫu train nhân thêm 2 bản noisy
         aug_noise_std=0.01,
-        #balance_high=True,       # oversample mẫu PM2.5 cao
+        balance_high=True,       # oversample mẫu PM2.5 cao
         high_quantile=0.8,
-        #high_repeat=2,
+        high_repeat=2,
     )
 
     print("Train shape:", train_X.shape, train_y.shape)
@@ -54,8 +54,8 @@ def main():
     print("Test shape:", test_X.shape, test_y.shape)
 
     # ================== 3. BUILD MODEL (SimpleRNN 2-STEP) ==================
-    epochs = 2
-    batch_size = 128
+    epochs = 50
+    batch_size = 64
     learning_rate = 0.001
 
     lookback = train_X.shape[1]

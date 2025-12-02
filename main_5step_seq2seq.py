@@ -44,12 +44,12 @@ def main():
         valid_ratio=0.9,
         # nếu muốn bật xử lý outlier / augmentation / imbalance:
         clip_outliers=True,
-        #augment_train=True,
-        #aug_n=2,
+        augment_train=True,
+        aug_n=2,
         aug_noise_std=0.01,
         balance_high=True,
         high_quantile=0.8,
-        #high_repeat=2,
+        high_repeat=2,
     )
 
     print("Train shape:", train_X.shape, train_y.shape)
@@ -57,8 +57,8 @@ def main():
     print("Test shape:", test_X.shape, test_y.shape)
 
     # =============== 3: BUILD SEQ2SEQ MODEL (LSTM) ===============
-    epochs = 2
-    batch_size = 32
+    epochs = 50
+    batch_size = 64
     learning_rate = 0.001
     horizon = 5
 
